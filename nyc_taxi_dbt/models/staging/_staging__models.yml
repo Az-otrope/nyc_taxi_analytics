@@ -1,0 +1,158 @@
+version: 2
+
+models:
+  - name: stg_yellow_trips
+    description: '{{ doc("yellow_trips_source_profile") }}' 
+    columns:
+      - name: trip_id
+        description: >
+          Surrogate key, md5 over vendor, pickup/dropoff timestamps,
+          pickup/dropoff location, distance and total amount. The TLC files have
+          no natural trip identifier.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: vendor_id
+        description: >
+          Provider that supplied the record. 1 and 2 are the long-standing
+          vendors; 6 and 7 appear in recent months. Left as a raw code rather
+          than a decoded name.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 6, 7]
+              config:
+                severity: warn
+
+      - name: pickup_datetime
+        description: Meter engagement time, as reported by the vendor.
+        data_tests:
+          - not_null
+
+      - name: dropoff_datetime
+        description: Meter disengagement time, as reported by the vendor.
+        data_tests:
+          - not_null
+
+      - name: passenger_count
+        description: >
+          Driver-entered passenger count. Null for roughly a quarter of the
+          rows, which arrive from the vendor with the whole optional block
+          (passenger count, rate code, store-and-forward flag, congestion
+          surcharge, airport fee) unpopulated.
+
+      - name: trip_distance_miles
+        description: Trip distance in miles reported by the taximeter.
+
+      - name: rate_code_id
+        description: >
+          Final rate code in effect. Code 99 is present in the source and is not
+          in the data dictionary; it is decoded as 'Unknown'.
+
+      - name: rate_code_desc
+        description: Human-readable label for rate_code_id.
+
+      - name: payment_type_id
+        description: >
+          How the passenger paid. Code 0 is present in the source and is not in
+          the data dictionary; it is decoded as 'Unknown' and lines up with the
+          rows where the optional vendor block is null.
+
+      - name: payment_type_desc
+        description: Human-readable label for payment_type_id.
+
+      - name: pickup_location_id
+        description: TLC taxi zone where the meter was engaged.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_taxi_zones')
+                field: location_id
+
+      - name: dropoff_location_id
+        description: TLC taxi zone where the meter was disengaged.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_taxi_zones')
+                field: location_id
+
+      - name: is_store_and_forward
+        description: >
+          True when the trip was held in vehicle memory before being sent to the
+          vendor because the vehicle had no server connection. Null where the
+          source flag is null.
+
+      - name: fare_amount
+        description: >
+          Time-and-distance fare calculated by the meter.
+          {{ doc("money_precision_rationale") }}
+      - name: extra_amount
+        description: Miscellaneous extras and surcharges (rush hour and overnight).
+      - name: mta_tax_amount
+        description: MTA tax, automatically triggered by the metered rate in use.
+      - name: tip_amount
+        description: Tip. Populated for card payments only; cash tips are not captured.
+      - name: tolls_amount
+        description: Total tolls paid during the trip.
+      - name: improvement_surcharge_amount
+        description: Improvement surcharge, assessed at flag drop.
+      - name: congestion_surcharge_amount
+        description: NY State congestion surcharge.
+      - name: airport_fee_amount
+        description: Per-pickup fee for LaGuardia and JFK.
+      - name: cbd_congestion_fee_amount
+        description: Manhattan central business district congestion fee.
+
+      - name: total_amount
+        description: >
+          Total charged to the passenger, excluding cash tips. Can be negative on
+          the source's voided/adjustment records.
+
+  - name: stg_taxi_zones
+    description: '{{ doc("taxi_zones_source_profile") }}' 
+    columns:
+      - name: location_id
+        description: TLC zone id, joined to by pickup_location_id and dropoff_location_id.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: borough
+        description: Borough the zone sits in. 'Unknown' for ids 264 and 265.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - Manhattan
+                  - Brooklyn
+                  - Queens
+                  - Bronx
+                  - Staten Island
+                  - EWR
+                  - Unknown
+
+      - name: zone_name
+        description: Zone name.
+        data_tests:
+          - not_null
+
+      - name: service_zone
+        description: Service zone the taxi zone belongs to.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Yellow Zone', 'Boro Zone', 'Airports', 'EWR', 'Unknown']
+
+      - name: is_known_zone
+        description: >
+          False for ids 264 (unidentified pickup/dropoff) and 265 (outside NYC),
+          which are not real taxi zones.
+        data_tests:
+          - not_null

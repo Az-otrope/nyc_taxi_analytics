@@ -1,0 +1,91 @@
+version: 2
+
+models:
+  - name: fct_yellow_trips
+    description: >
+      One row per plausible yellow taxi trip, with pickup/dropoff zone
+      attributes and derived metrics (duration, speed, tip %) already
+      computed. This is int_yellow_trips_derived_metrics materialized as a
+      table so BI tools aren't re-running the full filter/join/derive chain
+      on every query. pickup_location_id / dropoff_location_id are foreign
+      keys into dim_taxi_zones.
+    data_tests:
+      - schema_columns_match_set:
+          arguments:
+            column_names:
+              - trip_id
+              - vendor_id
+              - rate_code_id
+              - payment_type_id
+              - pickup_location_id
+              - dropoff_location_id
+              - pickup_datetime
+              - dropoff_datetime
+              - passenger_count
+              - trip_distance_miles
+              - is_store_and_forward
+              - fare_amount
+              - extra_amount
+              - mta_tax_amount
+              - tip_amount
+              - tolls_amount
+              - improvement_surcharge_amount
+              - congestion_surcharge_amount
+              - airport_fee_amount
+              - cbd_congestion_fee_amount
+              - total_amount
+              - payment_type_desc
+              - rate_code_desc
+              - pickup_borough
+              - pickup_zone_name
+              - pickup_service_zone
+              - pickup_is_known_zone
+              - dropoff_borough
+              - dropoff_zone_name
+              - dropoff_service_zone
+              - dropoff_is_known_zone
+              - trip_duration_minutes
+              - average_speed_mph
+              - tip_percentage
+    columns:
+      - name: trip_id
+        description: Surrogate key, unchanged from stg_yellow_trips.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: pickup_location_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_taxi_zones')
+                field: location_id
+
+      - name: dropoff_location_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_taxi_zones')
+                field: location_id
+
+  - name: dim_taxi_zones
+    description: >
+      One row per TLC taxi zone. Materialized copy of stg_taxi_zones,
+      published under the marts schema as the zone dimension for BI tools
+      to join against fct_yellow_trips.
+    data_tests:
+      - schema_columns_match_set:
+          arguments:
+            column_names:
+              - location_id
+              - borough
+              - zone_name
+              - service_zone
+              - is_known_zone
+    columns:
+      - name: location_id
+        data_tests:
+          - unique
+          - not_null

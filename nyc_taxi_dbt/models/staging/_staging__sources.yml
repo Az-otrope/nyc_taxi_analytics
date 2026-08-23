@@ -1,0 +1,66 @@
+version: 2
+
+sources:
+  - name: raw_taxi
+    description: >
+      Raw NYC Yellow Taxi trip data, downloaded as monthly Parquet files from
+      the NYC TLC Trip Record Data site and read directly off disk by DuckDB
+      (no separate load step required).
+    tables:
+      - name: yellow_tripdata
+        description: >
+          Union of all monthly yellow taxi trip files in data/raw/. Uses
+          union_by_name so months with slightly different column sets/order
+          (a known quirk of the TLC files, e.g. airport_fee appearing only in
+          later months) still combine cleanly instead of erroring or
+          misaligning columns. Because union_by_name tolerates column drift
+          rather than erroring on it, a genuinely new or removed column would
+          otherwise pass through silently -- schema_columns_match_set below
+          is what actually catches that.
+        meta:
+          external_location: "read_parquet('data/raw/yellow_tripdata_*.parquet', union_by_name=true)"
+        data_tests:
+          - schema_columns_match_set:
+              arguments:
+                column_names:
+                  - VendorID
+                  - tpep_pickup_datetime
+                  - tpep_dropoff_datetime
+                  - passenger_count
+                  - trip_distance
+                  - RatecodeID
+                  - store_and_fwd_flag
+                  - PULocationID
+                  - DOLocationID
+                  - payment_type
+                  - fare_amount
+                  - extra
+                  - mta_tax
+                  - tip_amount
+                  - tolls_amount
+                  - improvement_surcharge
+                  - total_amount
+                  - congestion_surcharge
+                  - Airport_fee
+                  - cbd_congestion_fee
+        columns:
+          - name: VendorID
+          - name: tpep_pickup_datetime
+          - name: tpep_dropoff_datetime
+          - name: passenger_count
+          - name: trip_distance
+          - name: RatecodeID
+          - name: store_and_fwd_flag
+          - name: PULocationID
+          - name: DOLocationID
+          - name: payment_type
+          - name: fare_amount
+          - name: extra
+          - name: mta_tax
+          - name: tip_amount
+          - name: tolls_amount
+          - name: improvement_surcharge
+          - name: total_amount
+          - name: congestion_surcharge
+          - name: Airport_fee
+          - name: cbd_congestion_fee

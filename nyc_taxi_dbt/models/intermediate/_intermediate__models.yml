@@ -1,0 +1,113 @@
+version: 2
+
+models:
+  - name: int_yellow_trips
+    description: >
+      stg_yellow_trips filtered down to trips that could plausibly have
+      happened: positive duration, non-negative total, positive distance,
+      and a pickup date after the TLC program existed. ~4.8% of staging
+      rows are dropped here. Column shapes and meanings are unchanged from
+      staging.
+    columns:
+      - name: trip_id
+        description: Surrogate key, unchanged from stg_yellow_trips.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: pickup_datetime
+        data_tests:
+          - not_null
+
+      - name: dropoff_datetime
+        data_tests:
+          - not_null
+
+      - name: trip_distance_miles
+        description: Always positive here; zero/negative distance trips are filtered out.
+
+      - name: total_amount
+        description: Always non-negative here; negative totals are filtered out.
+
+  - name: int_yellow_trips_zone_enriched
+    description: >
+      int_yellow_trips with pickup and dropoff zone attributes (borough,
+      zone name, service zone) joined in from stg_taxi_zones. One row per
+      trip, same grain as int_yellow_trips.
+    columns:
+      - name: trip_id
+        data_tests:
+          - unique
+          - not_null
+
+      - name: pickup_borough
+        description: Borough of pickup_location_id.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - Manhattan
+                  - Brooklyn
+                  - Queens
+                  - Bronx
+                  - Staten Island
+                  - EWR
+                  - Unknown
+
+      - name: dropoff_borough
+        description: Borough of dropoff_location_id.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - Manhattan
+                  - Brooklyn
+                  - Queens
+                  - Bronx
+                  - Staten Island
+                  - EWR
+                  - Unknown
+
+      - name: pickup_zone_name
+        data_tests:
+          - not_null
+
+      - name: dropoff_zone_name
+        data_tests:
+          - not_null
+
+  - name: int_yellow_trips_derived_metrics
+    description: >
+      int_yellow_trips_zone_enriched with metrics computed from its
+      timestamp, distance and fare columns. One row per trip, same grain
+      as int_yellow_trips.
+    columns:
+      - name: trip_id
+        data_tests:
+          - unique
+          - not_null
+
+      - name: trip_duration_minutes
+        description: dropoff_datetime minus pickup_datetime, in minutes. Always positive.
+        data_tests:
+          - not_null
+
+      - name: average_speed_mph
+        description: >
+          trip_distance_miles over trip duration. Not capped: ~3,998 trips
+          (0.02%) imply over 100mph, almost certainly meter/GPS noise on very
+          short trips rather than real speeds. Left in rather than filtered
+          or clamped, consistent with staging leaving the max-distance
+          outlier (328,522 miles) undecided for downstream consumers.
+        data_tests:
+          - not_null
+
+      - name: tip_percentage
+        description: >
+          tip_amount as a percentage of fare_amount, rounded to 2 decimals.
+          Null when fare_amount <= 0 (~0.05% of trips) since the percentage
+          is undefined against a non-positive base. 0 for cash/no-charge/
+          dispute trips, since tip_amount is only ever populated for card
+          payments.
