@@ -50,6 +50,22 @@ dbt build
 dbt docs generate && dbt docs serve
 ```
 
+## CI
+
+`.github/workflows/dbt_ci.yml` runs on every pull request:
+
+1. `dbt parse` — fails in seconds on a Jinja or `ref` error.
+2. `dbt build` — **actually builds every model and runs every test**, against a
+   deterministic ~50k-row Parquet fixture committed at `nyc_taxi_dbt/data/ci/`.
+3. `dbt docs generate`, with `run_results.json` and `manifest.json` uploaded as
+   artifacts.
+
+The source glob is a dbt var (`raw_data_glob`), which is what lets the same source
+definition point at the full 326 MB dataset locally and the tiny fixture in CI. Compiling
+alone would prove nothing — it cannot catch a fan-out, a bad cast, or a failing test.
+Regenerate the fixture with `python scripts/make_ci_sample.py` when the source schema
+changes.
+
 ## Testing approach
 
 Generic tests (`unique`, `not_null`, `relationships`, `accepted_values`) cover structure.
