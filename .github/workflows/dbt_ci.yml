@@ -40,10 +40,22 @@ jobs:
       # than the 326 MB gitignored raw data, so every model is actually built
       # and every test actually executed on a pull request.
       - name: Build (seeds + models + tests)
-        run: dbt build --profiles-dir ci --vars '{raw_data_glob: "data/ci/yellow_tripdata_*_ci.parquet"}'
+        # Folded block scalar (>-), not a plain scalar: the --vars argument
+        # contains a colon-space, which YAML would otherwise read as a nested
+        # mapping key. The single quotes are shell syntax and mean nothing to
+        # the YAML parser.
+        run: >-
+          dbt build --profiles-dir ci
+          --vars '{raw_data_glob: "data/ci/yellow_tripdata_*_ci.parquet"}'
 
       - name: Generate docs
-        run: dbt docs generate --profiles-dir ci --vars '{raw_data_glob: "data/ci/yellow_tripdata_*_ci.parquet"}'
+        # Folded block scalar (>-), not a plain scalar: the --vars argument
+        # contains a colon-space, which YAML would otherwise read as a nested
+        # mapping key. The single quotes are shell syntax and mean nothing to
+        # the YAML parser.
+        run: >-
+          dbt docs generate --profiles-dir ci
+          --vars '{raw_data_glob: "data/ci/yellow_tripdata_*_ci.parquet"}'
 
       # run_results.json is the artifact to look at when a run fails: it has
       # per-node timing and the failing test's compiled SQL path.
