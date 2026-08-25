@@ -5,3 +5,7 @@ dbt_packages/
 data/
 *.duckdb
 .DS_Store
+
+# Personal career-prep notes -- deliberately kept out of a public repo.
+/docs/interview-drill.md
+/docs/review-*.md
