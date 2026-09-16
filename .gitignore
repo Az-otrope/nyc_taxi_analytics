@@ -2,10 +2,18 @@ venv/
 logs/
 target/
 dbt_packages/
-data/
+# Raw TLC Parquet is downloaded, not committed. The small fixture in
+# data/ci/ IS committed on purpose so PRs can run a real `dbt build`.
+# Note the `**/` prefix: a pattern with an internal slash is anchored to the
+# directory holding this file, so a bare `data/raw/` would NOT match
+# nyc_taxi_dbt/data/raw/.
+**/data/raw/
 *.duckdb
 .DS_Store
 
 # Personal career-prep notes -- deliberately kept out of a public repo.
 /docs/interview-drill.md
 /docs/review-*.md
+
+# dbt writes an anonymous-usage id here; not part of the project.
+.user.yml

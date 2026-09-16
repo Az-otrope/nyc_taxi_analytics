@@ -1,0 +1,9 @@
+# Profile used by CI only (dbt --profiles-dir ci).
+# Kept out of ~/.dbt so CI is reproducible and your local profile is untouched.
+nyc_taxi_dbt:
+  target: ci
+  outputs:
+    ci:
+      type: duckdb
+      path: ci.duckdb
+      threads: 4

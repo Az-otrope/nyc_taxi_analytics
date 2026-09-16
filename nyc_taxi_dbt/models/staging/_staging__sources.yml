@@ -18,7 +18,7 @@ sources:
           otherwise pass through silently -- schema_columns_match_set below
           is what actually catches that.
         meta:
-          external_location: "read_parquet('data/raw/yellow_tripdata_*.parquet', union_by_name=true)"
+          external_location: "read_parquet('{{ var('raw_data_glob') }}', union_by_name=true)"
         data_tests:
           - schema_columns_match_set:
               arguments:
